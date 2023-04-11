@@ -18,6 +18,7 @@ You have to edit and fill in your netcup credentials.
 - Netcup APIKey
 - Netcup APIPassword
 - Domain
+
 Both API tokens can be generated in your CCP under "Stammdaten/>_API". (Keep them Secret!!!)
 
 ## Linux
