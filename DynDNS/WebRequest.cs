@@ -35,10 +35,13 @@ namespace DynDNS
 
         public bool DNSRecordDestionationChanged(ResponseMessage<DNSRecords> records)
         {
-            if (records.ResponseData.DnsRecords[0].Destination == GetCurrentPublicIP())
-                return false;
-            else
-                return true;
+            string currentIP = GetCurrentPublicIP();
+            foreach (var record in records.ResponseData.DnsRecords)
+            {
+                if (record.Destination == currentIP)
+                    return false;
+            }
+            return true;
         }
 
         public void UpdateDNSRecord(DNSRecords recordsSet)
