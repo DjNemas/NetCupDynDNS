@@ -296,7 +296,7 @@ namespace DynDNS
             HttpResponseMessage response = null;
             
             bool success = false;
-            TimeSpan waitTime = TimeSpan.FromSeconds(5);
+            TimeSpan waitTime = TimeSpan.FromMinutes(1);
             do
             {                
                 try
@@ -314,7 +314,7 @@ namespace DynDNS
                         Console.Write($"\rNo Internet Connection... Retry in {waitTime}");
                         Task.Delay(TimeSpan.FromSeconds(1)).Wait();
                     }
-                    waitTime = TimeSpan.FromSeconds(5);
+                    waitTime = TimeSpan.FromMinutes(1);
                     Console.ResetColor();
                     Console.WriteLine();
                 }
