@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace DynDNS
 {
@@ -292,7 +293,33 @@ namespace DynDNS
         {
             string json = JsonSerializer.Serialize(action);
             StringContent content = new(json, Encoding.UTF8, "application/json");
-            return _Client.PostAsync("", content).Result;
+            HttpResponseMessage response = null;
+            
+            bool success = false;
+            TimeSpan waitTime = TimeSpan.FromSeconds(5);
+            do
+            {                
+                try
+                {
+                    response = _Client.PostAsync("", content).Result;
+                    success = true;
+                }
+                catch (AggregateException)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine();
+                    while (waitTime.Ticks > 0)
+                    {
+                        waitTime = waitTime.Subtract(TimeSpan.FromSeconds(1));
+                        Console.Write($"\rNo Internet Connection... Retry in {waitTime}");
+                        Task.Delay(TimeSpan.FromSeconds(1)).Wait();
+                    }
+                    waitTime = TimeSpan.FromSeconds(5);
+                    Console.ResetColor();
+                    Console.WriteLine();
+                }
+            } while (!success);
+            return response;
         }
 
         private void PrintErrorResponse(ResponseMessage<string> response)
