@@ -8,7 +8,7 @@ The Binary exist for Windows x64 and Linux x64 (not ARM achitecture).
 Let us say u have a Server running on your home:
 When this Application is running on this Server, it will auto update the domain record to the public IP of this server.
 
-![Preview](https://djnemas.de/SX/WindowsTerminal_07hkX5nooe.gif)
+![Preview](https://djnemas.de/SX/WindowsTerminal_hczA9AShWq.gif)
 
 # HowTo
 ## Both OS
