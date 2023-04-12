@@ -1,8 +1,11 @@
 ﻿using DynDNS.Models.Actions;
 using DynDNS.Models.Credential;
 using DynDNS.Models.DNSInfoResponse;
+using DynDNS.Models.PublicIP;
 using DynDNS.Models.ResponseMessageDataType;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
@@ -33,28 +36,65 @@ namespace DynDNS
             _Client.BaseAddress = _EndPointURL;
         }
 
-        public bool DNSRecordDestionationChanged(ResponseMessage<DNSRecords> records)
+        public bool DNSRecordDestionationChanged(IPType type, ResponseMessage<DNSRecords> records, List<PublicIPAdresse> currentIPs)
         {
-            string currentIP = GetCurrentPublicIP();
+            bool hasDifferentDestination = false;
+
+            PublicIPAdresse ipAdresse = currentIPs.FirstOrDefault(x => x.Type == type);
+
+            if (ipAdresse != null && string.IsNullOrEmpty(ipAdresse.IP))
+                hasDifferentDestination = false;
+
             foreach (var record in records.ResponseData.DnsRecords)
             {
-                if (record.Destination == currentIP)
-                    return false;
+                IPAddress ip = null;
+                IPAddress.TryParse(record.Destination, out ip);
+                if (ip == null)
+                    continue;
+
+                switch (type)
+                {
+                    case IPType.IPv4:
+                        if (ip.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
+                            continue;
+                        break;
+                    case IPType.IPv6:
+                        if (ip.AddressFamily != System.Net.Sockets.AddressFamily.InterNetworkV6)
+                            continue;
+                        break;
+                }
+                
+                if (ipAdresse != null && record.Destination != ipAdresse.IP)
+                    hasDifferentDestination = true;
             }
-            return true;
+            return hasDifferentDestination;
         }
 
-        public void UpdateDNSRecord(DNSRecords recordsSet)
+        public void UpdateDNSRecord(IPType type, DNSRecords recordsSet, List<PublicIPAdresse> currentIPs)
         {
-            string newIP = GetCurrentPublicIP();
-            IPAddress temp;
+            PublicIPAdresse ipAdresse = currentIPs.FirstOrDefault(x => x.Type == type);
+            if(ipAdresse == null)
+                return;
+
             foreach (var record in recordsSet.DnsRecords)
             {
-                if (IPAddress.TryParse(record.Destination, out temp))
+                IPAddress ip = null;
+                IPAddress.TryParse(record.Destination, out ip);
+
+                if (ip == null)
+                    continue;
+
+                switch (type)
                 {
-                    record.Destination = newIP;
+                    case IPType.IPv4:
+                        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                            record.Destination = ipAdresse.IP;
+                        break;
+                    case IPType.IPv6:
+                        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                            record.Destination = ipAdresse.IP;
+                        break;
                 }
-                    
             }
 
             RequestAction<UpdateDnsRecords> action = new()
@@ -94,11 +134,42 @@ namespace DynDNS
             Console.WriteLine("Domain DNS Destionation Updated!");
         }
 
-        private string GetCurrentPublicIP()
+        public List<PublicIPAdresse> GetCurrentPublicIP()
         {
             using (HttpClient client = new HttpClient())
             {
-                return client.GetStringAsync("https://api.ipify.org/").Result;
+                List<PublicIPAdresse> list = new List<PublicIPAdresse>();
+
+                PublicIPAdresse ipv4 = new();
+                ipv4.Type = IPType.IPv4;
+                PublicIPAdresse ipv6 = new();
+                ipv6.Type = IPType.IPv6;
+                
+                try
+                {
+                    Console.WriteLine("Try getting public IPv4 IP");
+                    ipv4.IP = client.GetStringAsync("https://api4.my-ip.io/ip").Result;
+                    Console.WriteLine("Got IPv4 public IP");
+                }
+                catch 
+                {
+                    Console.WriteLine("IPv4 not Supported on your current connection.");
+                }
+                try
+                {
+                    Console.WriteLine("Try getting public IPv6 IP");
+                    ipv6.IP = client.GetStringAsync("https://api6.my-ip.io/ip").Result;
+                    Console.WriteLine("Got IPv6 public IP");
+                }
+                catch 
+                {
+                    Console.WriteLine("IPv6 not Supported on your current connection.");
+                }
+
+                list.Add(ipv4);
+                list.Add(ipv6);
+
+                return list;
             }
         }
 
