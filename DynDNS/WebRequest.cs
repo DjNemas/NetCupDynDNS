@@ -149,21 +149,31 @@ namespace DynDNS
                 try
                 {
                     Console.WriteLine("Try getting public IPv4 IP");
-                    ipv4.IP = client.GetStringAsync("https://api4.my-ip.io/ip").Result;
+                    ipv4.IP = client.GetStringAsync("https://api4.my-ip.io/v1/ip").Result;
                     Console.WriteLine("Got IPv4 public IP");
                 }
-                catch 
+                catch (Exception ex)
                 {
                     Console.WriteLine("IPv4 not Supported on your current connection.");
+#if DEBUG
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(ex.Message);
+                    Console.ResetColor();
+#endif
                 }
                 try
                 {
                     Console.WriteLine("Try getting public IPv6 IP");
-                    ipv6.IP = client.GetStringAsync("https://api6.my-ip.io/ip").Result;
+                    ipv6.IP = client.GetStringAsync("https://api6.my-ip.io/v1/ip").Result;
                     Console.WriteLine("Got IPv6 public IP");
                 }
-                catch 
+                catch (Exception ex)
                 {
+#if DEBUG
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(ex.Message);
+                    Console.ResetColor();
+#endif
                     Console.WriteLine("IPv6 not Supported on your current connection.");
                 }
 

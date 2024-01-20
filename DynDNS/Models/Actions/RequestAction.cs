@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace DynDNS.Models.Actions
+﻿namespace DynDNS.Models.Actions
 {
     public class RequestAction<T>
     {
