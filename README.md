@@ -12,7 +12,7 @@ When this Application is running on this Server, it will auto update the domain 
 
 # HowTo
 ## Both OS
-On first startup a AccountInformation.json file will be created in same directory of the binary file.
+On first startup a `AccountInformation.json` file will be created in same directory of the binary file.
 You have to edit and fill in your netcup credentials.
 - Netcup Customer ID
 - Netcup APIKey
@@ -25,6 +25,8 @@ Both API tokens can be generated in your CCP under "Stammdaten/>_API" or respect
 
 The program will also allow the usage of environment variables. 
 You can set them in your environment variables according to your OS.
+These will be stored in the `AccountInformation.json` file in case that file does not exist.
+
 The following variables are supported
 
 * NETCUP_API_KEY

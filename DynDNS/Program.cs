@@ -35,12 +35,11 @@ internal class Program
                 request.LogoutClient();
 
                 StartWaitTimer();
-                Console.Clear();
             }
             else
             {
                 Console.WriteLine($"Closing application in {ShutdownTimeInSeconds} seconds.");
-                Task.Delay(TimeSpan.FromSeconds(ShutdownTimeInSeconds));
+                Task.Delay(TimeSpan.FromSeconds(ShutdownTimeInSeconds)).Wait();
                 break;
             }
         }
@@ -48,14 +47,13 @@ internal class Program
 
     private static void StartWaitTimer()
     {
-        Console.WriteLine($"Next execution in {ExecutionInterval} minutes.");
-        var waitTime = ExecutionInterval;
-        while (waitTime.Ticks > 0)
-        {
-            Console.Write($"\rRetry in {waitTime}");
-            Task.Delay(TimeSpan.FromSeconds(1)).Wait();
-            waitTime = waitTime.Subtract(TimeSpan.FromSeconds(1));
-        }
+        var now = TimeOnly.FromDateTime(DateTime.Now);
+        var logMessage =
+            $"Current Time: {now.ToLongTimeString()}. " +
+            $"Next execution in {ExecutionInterval} minutes at " +
+            $"{now.AddMinutes(ExecutionInterval.TotalMinutes).ToLongTimeString()}.";
+        Console.WriteLine(logMessage);
+        Task.Delay(ExecutionInterval).Wait();
     }
 
     private static void UpdateDnsRecords(List<PublicIPAdresse> currentIPs, WebRequest request,
