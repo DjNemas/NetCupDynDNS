@@ -48,9 +48,10 @@ internal class Program
     private static void StartWaitTimer()
     {
         var now = TimeOnly.FromDateTime(DateTime.Now);
+        var minuteText = ExecutionInterval.TotalMinutes > 1 ? "minutes" : "minute";
         var logMessage =
             $"Current Time: {now.ToLongTimeString()}. " +
-            $"Next execution in {ExecutionInterval} minutes at " +
+            $"Next execution in {ExecutionInterval.TotalMinutes} {minuteText} at " +
             $"{now.AddMinutes(ExecutionInterval.TotalMinutes).ToLongTimeString()}.";
         Console.WriteLine(logMessage);
         Task.Delay(ExecutionInterval).Wait();
