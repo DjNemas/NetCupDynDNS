@@ -259,7 +259,7 @@ internal class WebRequest
         if (loginErrorRespone != null && loginErrorRespone.Status != "success")
         {
             PrintErrorRed(
-                $"Login failed! Please Check your Credentials in {AccountInformationFile.FileName} File.");
+                $"Login failed! Please Check your Credentials in {ConfigFile.FileName} File.");
             PrintErrorResponse(loginErrorRespone);
             return false;
         }

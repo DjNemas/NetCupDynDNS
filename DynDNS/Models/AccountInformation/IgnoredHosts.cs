@@ -11,7 +11,7 @@ internal record IgnoredHosts(List<string> Hostnames)
         "*", "@", "autoconfig", "db", "google", "key1._domainkey", "key2._domainkey", "mail", "webmail"
     ];
 
-    private const string EnvironmentVariableDelimiter = ",";
+    public const string EnvironmentVariableDelimiter = ",";
 
     public static IgnoredHosts CreateIgnoredHosts()
     {

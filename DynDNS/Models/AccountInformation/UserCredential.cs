@@ -2,13 +2,13 @@
 
 namespace DynDNS.Models.AccountInformation;
 
-internal class UserCredential
+internal record UserCredential
 {
-    public string Domain { get; set; }
-    public uint ApiCustomerNumber { get; set; }
-    public string ApiClientPW { get; set; }
-    public string ApiClientKey { get; set; }
-
+    public string Domain { get; init; }
+    public uint ApiCustomerNumber { get; init; }
+    public string ApiClientPW { get; init; }
+    public string ApiClientKey { get; init; }
+    
     public static UserCredential CreateUserCredentials()
     {
         var customerNumber = 0u;

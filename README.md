@@ -12,12 +12,28 @@ When this Application is running on this Server, it will auto update the domain 
 
 # HowTo
 ## Both OS
-On first startup a `AccountInformation.json` file will be created in same directory of the binary file.
-You have to edit and fill in your netcup credentials.
-- Netcup Customer ID
-- Netcup APIKey
-- Netcup APIPassword
-- Domain
+
+You can run the application via `./DynDns`. If you use
+
+```bash
+./DynDns -h
+```
+
+you get a help that explains the different command line options. Required are
+
+* --apiKey
+* --api-password
+* --customer-number
+* --domain
+
+to form a valid request to the netcup DNS api.
+
+Additionally you can use
+
+* --execution-interval-in-minutes - Interval in minutes for checking if IP has changed
+* --ticking-clock - To display a live clock in the terminal that counts down till the next execution
+* --ignored-hostname - You can list the hostnames that will be ignored from the update process. Example --ignored-hostname host1 --ignored-hostname host2 etc.
+* --save-config - Stores your parameters into a configuration file which will be used the next time. If this flag is not set, it looks for a configuration file and will delete it to not potentially leak your credentials.
 
 Both API tokens can be generated in your CCP under "Stammdaten/>_API" or respectively "Master Data/>_API". (Keep them Secret!!!)
 
@@ -25,7 +41,7 @@ Both API tokens can be generated in your CCP under "Stammdaten/>_API" or respect
 
 The program will also allow the usage of environment variables. 
 You can set them in your environment variables according to your OS.
-These will be stored in the `AccountInformation.json` file in case that file does not exist.
+These will be stored in the `dyndns-updater-config.json.json` file in case that file does not exist.
 
 The following variables are supported
 
