@@ -18,12 +18,20 @@ namespace DynDNS;
 
 internal class WebRequest
 {
+    private static class IdentifyOwnIpAddressEndpoints
+    {
+        public const string Ipv4 = "https://api.ipify.org";
+        public const string Ipv6 = "https://api6.ipify.org";
+    }
+    
     private readonly HttpClient _Client;
     private readonly uint _ApiCustomerNumber;
     private readonly string _DomainURL;
     private readonly string _ApiClientPW;
     private readonly string _ApiClientKey;
     private readonly Uri _EndPointURL = new Uri("https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON");
+    
+
 
     private string _ApiSessionID;
 
@@ -138,51 +146,53 @@ internal class WebRequest
 
     public List<PublicIPAdresse> GetCurrentPublicIP()
     {
-        using (HttpClient client = new HttpClient())
+        using var client = new HttpClient();
+        var list = new List<PublicIPAdresse>();
+
+        PublicIPAdresse ipv4 = new()
         {
-            List<PublicIPAdresse> list = new List<PublicIPAdresse>();
+            Type = IPType.IPv4
+        };
+        PublicIPAdresse ipv6 = new()
+        {
+            Type = IPType.IPv6
+        };
 
-            PublicIPAdresse ipv4 = new();
-            ipv4.Type = IPType.IPv4;
-            PublicIPAdresse ipv6 = new();
-            ipv6.Type = IPType.IPv6;
-                
-            try
-            {
-                Console.WriteLine("Try getting public IPv4 IP");
-                ipv4.IP = client.GetStringAsync("https://api4.my-ip.io/v1/ip").Result;
-                Console.WriteLine("Got IPv4 public IP");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("IPv4 not Supported on your current connection.");
-#if DEBUG
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex.Message);
-                Console.ResetColor();
-#endif
-            }
-            try
-            {
-                Console.WriteLine("Try getting public IPv6 IP");
-                ipv6.IP = client.GetStringAsync("https://api6.my-ip.io/v1/ip").Result;
-                Console.WriteLine("Got IPv6 public IP");
-            }
-            catch (Exception ex)
-            {
-#if DEBUG
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex.Message);
-                Console.ResetColor();
-#endif
-                Console.WriteLine("IPv6 not Supported on your current connection.");
-            }
-
-            list.Add(ipv4);
-            list.Add(ipv6);
-
-            return list;
+        try
+        {
+            Console.WriteLine("Try getting public IPv4 IP");
+            ipv4.IP = client.GetStringAsync(IdentifyOwnIpAddressEndpoints.Ipv4).Result;
+            Console.WriteLine("Got IPv4 public IP");
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine("IPv4 not Supported on your current connection.");
+#if DEBUG
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(ex.Message);
+            Console.ResetColor();
+#endif
+        }
+        try
+        {
+            Console.WriteLine("Try getting public IPv6 IP");
+            ipv6.IP = client.GetStringAsync(IdentifyOwnIpAddressEndpoints.Ipv6).Result;
+            Console.WriteLine("Got IPv6 public IP");
+        }
+        catch (Exception ex)
+        {
+#if DEBUG
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(ex.Message);
+            Console.ResetColor();
+#endif
+            Console.WriteLine("IPv6 not Supported on your current connection.");
+        }
+
+        list.Add(ipv4);
+        list.Add(ipv6);
+
+        return list;
     }
 
     public ResponseMessage<DNSRecords> GetDNSRecordInfo()
