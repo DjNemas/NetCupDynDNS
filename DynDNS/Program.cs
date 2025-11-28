@@ -1,6 +1,6 @@
 ﻿using DynDNS.Commands;
-using Spectre.Console;
-using Spectre.Console.Cli;
+using DynDNS.Cli.Application;
+using DynDNS.Cli.Helpers;
 
 namespace DynDNS;
 
@@ -12,12 +12,11 @@ internal class Program
 
         app.Configure(config =>
         {
-            config.SetExceptionHandler((ex, resolver) =>
+            config.SetExceptionHandler((ex) =>
             {
-                AnsiConsole.WriteException(ex, ExceptionFormats.ShortenEverything);
+                ConsoleHelper.WriteException(ex, ExceptionFormat.ShortenEverything);
             });
         });
         return app.Run(args);
-        
     }
 }

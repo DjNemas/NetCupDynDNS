@@ -5,6 +5,6 @@ namespace DynDNS.Models.ResponseMessageDataType
     public class SessionID
     {
         [JsonPropertyName("apisessionid")]
-        public string ApiSessionID { get; set; }
+        public required string ApiSessionID { get; set; }
     }
 }

@@ -5,6 +5,10 @@ using DynDNS.Models.AccountInformation;
 
 namespace DynDNS;
 
+/// <summary>
+/// Manages the configuration file for storing account information.
+/// See dyndns-updater-config.json.example for a sample configuration.
+/// </summary>
 internal class ConfigFile
 {
     private readonly FileInfo _file;
@@ -22,7 +26,7 @@ internal class ConfigFile
         return _file.Exists;
     }
 
-    public AccountInformation LoadAccountInformation()
+    public AccountInformation? LoadAccountInformation()
     {
         var jsonString = File.ReadAllText(_file.FullName);
         return JsonSerializer.Deserialize<AccountInformation>(jsonString);

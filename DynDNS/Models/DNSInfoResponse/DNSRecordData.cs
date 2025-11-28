@@ -5,24 +5,24 @@ namespace DynDNS.Models.DNSInfoResponse
     public class DNSRecordData
     {
         [JsonPropertyName("id")]
-        public string ID { get; set; }
+        public required string ID { get; set; }
 
         [JsonPropertyName("hostname")]
-        public string Hostname { get; set; }
+        public required string Hostname { get; set; }
 
         [JsonPropertyName("type")]
-        public string Type { get; set; }
+        public required string Type { get; set; }
 
         [JsonPropertyName("priority")]
-        public string Priority { get; set; }
+        public required string Priority { get; set; }
 
         [JsonPropertyName("destination")]
-        public string Destination { get; set; }
+        public required string Destination { get; set; }
 
         [JsonPropertyName("deleterecord")]
         public bool DeleteRecord { get; set; }
 
         [JsonPropertyName("state")]
-        public string State { get; set; }
+        public required string State { get; set; }
     }
 }

@@ -7,7 +7,7 @@ namespace DynDNS.Models.DNSInfoResponse;
 public class DNSRecords
 {
     [JsonPropertyName("dnsrecords")]
-    public DNSRecordData[] DnsRecords { get; set; }
+    public required DNSRecordData[] DnsRecords { get; set; }
 
     public void RemoveHosts(List<string> hostnames)
     {

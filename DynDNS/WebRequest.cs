@@ -30,10 +30,9 @@ internal class WebRequest
     private readonly string _ApiClientPW;
     private readonly string _ApiClientKey;
     private readonly Uri _EndPointURL = new Uri("https://ccp.netcup.net/run/webservice/servers/endpoint.php?JSON");
-    
+    private readonly JsonSerializerOptions _jsonOptions;
 
-
-    private string _ApiSessionID;
+    private string? _ApiSessionID;
 
     public WebRequest(UserCredential credentials)
     {
@@ -44,22 +43,29 @@ internal class WebRequest
 
         _Client = new HttpClient();
         _Client.BaseAddress = _EndPointURL;
+
+        _jsonOptions = new JsonSerializerOptions
+        {
+            Converters = { 
+                 new ResponseMessageConverter<SessionID>(),
+                 new ResponseMessageConverter<DNSRecords>(),
+                 new ResponseMessageConverter<string>() 
+            }
+        };
     }
 
     public bool DNSRecordDestionationChanged(IPType type, ResponseMessage<DNSRecords> records, List<PublicIPAdresse> currentIPs)
     {
         bool hasDifferentDestination = false;
 
-        PublicIPAdresse ipAdresse = currentIPs.FirstOrDefault(x => x.Type == type);
+        PublicIPAdresse? ipAdresse = currentIPs.FirstOrDefault(x => x.Type == type);
 
-        if (ipAdresse != null && string.IsNullOrEmpty(ipAdresse.IP))
-            hasDifferentDestination = false;
+        if (ipAdresse == null || string.IsNullOrEmpty(ipAdresse.IP) || records.ResponseData == null)
+            return false;
 
         foreach (var record in records.ResponseData.DnsRecords)
         {
-            IPAddress ip = null;
-            IPAddress.TryParse(record.Destination, out ip);
-            if (ip == null)
+            if (!IPAddress.TryParse(record.Destination, out IPAddress? ip))
                 continue;
 
             switch (type)
@@ -74,7 +80,7 @@ internal class WebRequest
                     break;
             }
                 
-            if (ipAdresse != null && record.Destination != ipAdresse.IP)
+            if (record.Destination != ipAdresse.IP)
                 hasDifferentDestination = true;
         }
         return hasDifferentDestination;
@@ -82,16 +88,13 @@ internal class WebRequest
 
     public void UpdateDNSRecord(IPType type, DNSRecords recordsSet, List<PublicIPAdresse> currentIPs)
     {
-        PublicIPAdresse ipAdresse = currentIPs.FirstOrDefault(x => x.Type == type);
+        PublicIPAdresse? ipAdresse = currentIPs.FirstOrDefault(x => x.Type == type);
         if(ipAdresse == null)
             return;
 
         foreach (var record in recordsSet.DnsRecords)
         {
-            IPAddress ip = null;
-            IPAddress.TryParse(record.Destination, out ip);
-
-            if (ip == null)
+            if (!IPAddress.TryParse(record.Destination, out IPAddress? ip))
                 continue;
 
             switch (type)
@@ -109,36 +112,42 @@ internal class WebRequest
 
         RequestAction<UpdateDnsRecords> action = new()
         {
-            action = "updateDnsRecords",
-            param = new UpdateDnsRecords()
+            Action = "updateDnsRecords",
+            Param = new UpdateDnsRecords()
             {
                 DomainName = _DomainURL,
                 CustonmerNumber = _ApiCustomerNumber,
                 ApiKey = _ApiClientKey,
-                ApiSessionID = _ApiSessionID,
+                ApiSessionID = _ApiSessionID ?? string.Empty,
                 DNSRecordSet = recordsSet
             }
         };
 
         string jsonString = SendActionPost(action).Content.ReadAsStringAsync().Result;
 
-        // Deserilize respone of correct type
-        ResponseMessage<DNSRecords> statusOkResponse = null;
-        ResponseMessage<string> statusErrorRespone = null;
+        ResponseMessage<DNSRecords>? updateResponse;
         try
         {
-            statusOkResponse = JsonSerializer.Deserialize<ResponseMessage<DNSRecords>>(jsonString);
+            updateResponse = JsonSerializer.Deserialize<ResponseMessage<DNSRecords>>(jsonString, _jsonOptions);
         }
-        catch
+        catch (JsonException ex)
         {
-            statusErrorRespone = JsonSerializer.Deserialize<ResponseMessage<string>>(jsonString);
+            PrintErrorRed($"Failed to deserialize DNS update response: {ex.Message}");
+            PrintErrorRed($"JSON Response: {jsonString}");
+            return;
         }
 
-        // If Update not work print response message
-        if (statusErrorRespone != null && statusErrorRespone.Status != "success")
+        if (updateResponse == null || updateResponse.IsError)
         {
-            PrintErrorRed("DNS Update failed:");
-            PrintErrorResponse(statusErrorRespone);
+            if (updateResponse != null)
+            {
+                PrintErrorRed("DNS Update failed:");
+                PrintErrorRed($"Status: {updateResponse.Status}");
+                PrintErrorRed($"Status Code: {updateResponse.StatusCode}");
+                PrintErrorRed($"Short Message: {updateResponse.ShortMessage}");
+                if (!string.IsNullOrEmpty(updateResponse.LongMessage))
+                    PrintErrorRed($"Long Message: {updateResponse.LongMessage}");
+            }
             return;
         }
         Console.WriteLine("Domain DNS Destionation Updated!");
@@ -195,15 +204,15 @@ internal class WebRequest
         return list;
     }
 
-    public ResponseMessage<DNSRecords> GetDNSRecordInfo()
+    public ResponseMessage<DNSRecords>? GetDNSRecordInfo()
     {
         RequestAction<InfoDnsRecords> acton = new()
         {
-            action = "infoDnsRecords",
-            param = new InfoDnsRecords()
+            Action = "infoDnsRecords",
+            Param = new InfoDnsRecords()
             {
                 ApiKey = _ApiClientKey,
-                ApiSessionID = _ApiSessionID,
+                ApiSessionID = _ApiSessionID ?? string.Empty,
                 CustonmerNumber = _ApiCustomerNumber,
                 DomainName = _DomainURL
             }
@@ -212,37 +221,41 @@ internal class WebRequest
         HttpResponseMessage response = SendActionPost(acton);
         string jsonString = response.Content.ReadAsStringAsync().Result;
 
-        // Deserilize respone of correct type
-        ResponseMessage<DNSRecords> statusOkResponse = null;
-        ResponseMessage<string> statusErrorRespone = null;
+        ResponseMessage<DNSRecords>? dnsResponse;
         try
         {
-            statusOkResponse = JsonSerializer.Deserialize<ResponseMessage<DNSRecords>>(jsonString);
+            dnsResponse = JsonSerializer.Deserialize<ResponseMessage<DNSRecords>>(jsonString, _jsonOptions);
         }
-        catch
+        catch (JsonException ex)
         {
-            statusErrorRespone = JsonSerializer.Deserialize<ResponseMessage<string>>(jsonString);
+            Console.WriteLine($"Failed to deserialize DNS record info response: {ex.Message}");
+            return null;
         }
 
-        // If Login not work print response message
-        if (statusErrorRespone != null && statusErrorRespone.Status != "success")
+        if (dnsResponse == null || dnsResponse.IsError)
         {
-            Console.WriteLine("Recive DNS Zone Data failed:");
-            PrintErrorResponse(statusErrorRespone);
+            if (dnsResponse != null)
+            {
+                Console.WriteLine("Recive DNS Zone Data failed:");
+                Console.WriteLine($"Status: {dnsResponse.Status}");
+                Console.WriteLine($"Status Code: {dnsResponse.StatusCode}");
+                Console.WriteLine($"Short Message: {dnsResponse.ShortMessage}");
+                if (!string.IsNullOrEmpty(dnsResponse.LongMessage))
+                    Console.WriteLine($"Long Message: {dnsResponse.LongMessage}");
+            }
             return null;
         }            
 
         Console.WriteLine("Recive DNS Zone Data success!");
-        return statusOkResponse;
+        return dnsResponse;
     }
 
     public bool LoginClient()
     {
-        // Create action methode content
         RequestAction<ClientLogin> action = new()
         {
-            action = "login",
-            param = new ClientLogin()
+            Action = "login",
+            Param = new ClientLogin()
             {
                 ApiKey = _ApiClientKey,
                 ApiPassword = _ApiClientPW,
@@ -250,33 +263,35 @@ internal class WebRequest
             }
         };
 
-        // Send Post request
         string jsonString = SendActionPost(action).Content.ReadAsStringAsync().Result;
 
-        // Deserilize respone of correct type
-        ResponseMessage<SessionID> loginOkResponse = null;
-        ResponseMessage<string> loginErrorRespone = null;
+        ResponseMessage<SessionID>? response;
         try
         {
-            loginOkResponse = JsonSerializer.Deserialize<ResponseMessage<SessionID>>(jsonString);
+            response = JsonSerializer.Deserialize<ResponseMessage<SessionID>>(jsonString, _jsonOptions);
         }
-        catch
+        catch (JsonException ex)
         {
-            loginErrorRespone = JsonSerializer.Deserialize<ResponseMessage<string>>(jsonString);
-        }
-
-        // If Login not work print response message
-        if (loginErrorRespone != null && loginErrorRespone.Status != "success")
-        {
-            PrintErrorRed(
-                $"Login failed! Please Check your Credentials in {ConfigFile.FileName} File.");
-            PrintErrorResponse(loginErrorRespone);
+            PrintErrorRed($"Failed to deserialize login response: {ex.Message}");
             return false;
         }
 
-        // store sessionID
-        if (loginOkResponse != null)
-            _ApiSessionID = loginOkResponse.ResponseData.ApiSessionID;
+        if (response == null || response.IsError)
+        {
+            if (response != null)
+            {
+                PrintErrorRed($"Login failed! Please Check your Credentials in {ConfigFile.FileName} File.");
+                PrintErrorRed($"Status: {response.Status}");
+                PrintErrorRed($"Status Code: {response.StatusCode}");
+                PrintErrorRed($"Short Message: {response.ShortMessage}");
+                if (!string.IsNullOrEmpty(response.LongMessage))
+                    PrintErrorRed($"Long Message: {response.LongMessage}");
+            }
+            return false;
+        }
+
+        if (response.ResponseData != null)
+            _ApiSessionID = response.ResponseData.ApiSessionID;
         Console.WriteLine("Login success!");
         return true;
     }
@@ -285,27 +300,40 @@ internal class WebRequest
     {
         RequestAction<ClientLogout> action = new()
         {
-            action = "logout",
-            param = new ClientLogout()
+            Action = "logout",
+            Param = new ClientLogout()
             {
                 ApiKey = _ApiClientKey,
                 CustomerNumber = _ApiCustomerNumber,
-                ApiSessionID = _ApiSessionID
+                ApiSessionID = _ApiSessionID ?? string.Empty
             }
         };
 
-        // Send Post request
         HttpResponseMessage response = SendActionPost(action);
-        string jsonString = SendActionPost(action).Content.ReadAsStringAsync().Result;
+        string jsonString = response.Content.ReadAsStringAsync().Result;
 
-        // Deserilize respone
-        var logoutResponse = JsonSerializer.Deserialize<ResponseMessage<string>>(jsonString);
-
-        // If Login not work print response message
-        if(logoutResponse != null && logoutResponse.Status != "success")
+        ResponseMessage<string>? logoutResponse;
+        try
         {
-            PrintErrorRed("Logout failed:");
-            PrintErrorResponse(logoutResponse);
+            logoutResponse = JsonSerializer.Deserialize<ResponseMessage<string>>(jsonString, _jsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            PrintErrorRed($"Failed to deserialize logout response: {ex.Message}");
+            return;
+        }
+
+        if (logoutResponse == null || logoutResponse.IsError)
+        {
+            if (logoutResponse != null)
+            {
+                PrintErrorRed("Logout failed:");
+                PrintErrorRed($"Status: {logoutResponse.Status}");
+                PrintErrorRed($"Status Code: {logoutResponse.StatusCode}");
+                PrintErrorRed($"Short Message: {logoutResponse.ShortMessage}");
+                if (!string.IsNullOrEmpty(logoutResponse.LongMessage))
+                    PrintErrorRed($"Long Message: {logoutResponse.LongMessage}");
+            }
             return;
         }
         Console.WriteLine("Logout success!");
@@ -315,7 +343,7 @@ internal class WebRequest
     {
         string json = JsonSerializer.Serialize(action);
         StringContent content = new(json, Encoding.UTF8, "application/json");
-        HttpResponseMessage response = null;
+        HttpResponseMessage? response = null;
             
         bool success = false;
         TimeSpan waitTime = TimeSpan.FromMinutes(1);
@@ -341,19 +369,7 @@ internal class WebRequest
                 Console.WriteLine();
             }
         } while (!success);
-        return response;
-    }
-
-    private void PrintErrorResponse(ResponseMessage<string> response)
-    {
-        if (response != null)
-        {
-            foreach (PropertyInfo propertyInfo in response.GetType().GetProperties())
-            {
-                PrintErrorRed(propertyInfo.Name + ": " + propertyInfo.GetValue(response));
-            }
-            return;
-        }
+        return response!;
     }
 
     private void PrintErrorRed(string msg)
@@ -362,5 +378,4 @@ internal class WebRequest
         Console.WriteLine(msg);
         Console.ResetColor();
     }
-
 }

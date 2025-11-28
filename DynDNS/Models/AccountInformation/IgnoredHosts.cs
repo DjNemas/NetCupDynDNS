@@ -6,34 +6,18 @@ namespace DynDNS.Models.AccountInformation;
 
 internal record IgnoredHosts(List<string> Hostnames)
 {
-    private static readonly List<string> DefaultHostnames =
-    [
-        "*", "@", "autoconfig", "db", "google", "key1._domainkey", "key2._domainkey", "mail", "webmail"
-    ];
-
     public const string EnvironmentVariableDelimiter = ",";
 
-    public static IgnoredHosts CreateIgnoredHosts()
-    {
-        var ignoredHostnames = DefaultHostnames;
-        try
-        {
-            var hostNamesEnvironmentVariable =
-                Environment.GetEnvironmentVariable(EnvironmentVariables.NetcupIgnoredHosts);
-
-            if (string.IsNullOrEmpty(hostNamesEnvironmentVariable))
-                throw new ArgumentNullException(nameof(hostNamesEnvironmentVariable));
-
-            ignoredHostnames = hostNamesEnvironmentVariable.Split(EnvironmentVariableDelimiter).ToList();
-        }
-        catch (Exception)
-        { 
-            Console.WriteLine(
-                $"Couldn't read environment variable {EnvironmentVariables.NetcupIgnoredHosts}. " +
-                $"Loading default hostnames \"{string.Join(",", DefaultHostnames)}\"!");
-        }
-
-        IgnoredHosts ignoredHosts = new(ignoredHostnames);
-        return ignoredHosts;
-    }
+    /// <summary>
+    /// Creates example ignored hosts for configuration file generation.
+    /// These are common hosts that users typically want to ignore.
+    /// </summary>
+    public static List<string> GetExampleHosts() => 
+    [
+        "*",
+        "@", 
+        "autoconfig",
+        "mail",
+        "webmail"
+    ];
 }

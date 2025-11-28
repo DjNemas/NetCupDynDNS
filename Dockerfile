@@ -1,11 +1,12 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
+﻿FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 USER $APP_UID
 WORKDIR /app
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["DynDNS/DynDNS.csproj", "DynDNS/"]
+COPY ["DynDNS.Cli/DynDNS.Cli.csproj", "DynDNS.Cli/"]
 RUN dotnet restore "DynDNS/DynDNS.csproj"
 COPY . .
 WORKDIR "/src/DynDNS"

@@ -1,8 +1,13 @@
-﻿namespace DynDNS.Models.Actions
+﻿using System.Text.Json.Serialization;
+
+namespace DynDNS.Models.Actions
 {
     public class RequestAction<T>
     {
-        public string action { get; set; }
-        public T param { get; set; }
+        [JsonPropertyName("action")]
+        public required string Action { get; set; }
+        
+        [JsonPropertyName("param")]
+        public required T Param { get; set; }
     }
 }
