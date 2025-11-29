@@ -262,17 +262,3 @@ export NETCUP_DOMAIN="example.com"
 ### Example 5: Keep alive with ticking countdown
 ```bash
 ./DynDNS -k "abc123" -p "xyz789" -n 123456 -d "example.com" -e 30 -t
-
-
-
-
-
-
-
-
-
-
-
-
-
-
