@@ -7,7 +7,6 @@ namespace DynDNS;
 
 /// <summary>
 /// Manages the configuration file for storing account information.
-/// See dyndns-updater-config.json.example for a sample configuration.
 /// </summary>
 internal class ConfigFile
 {

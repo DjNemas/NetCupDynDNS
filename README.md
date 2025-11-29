@@ -55,7 +55,7 @@ Both API tokens can be generated in your CCP under "Stammdaten/>_API" or respect
 
 * `--save-config` (or `-s`) - Stores your parameters into a configuration file (`dyndns-updater-config.json`) which will be used in future runs with Priority 2.
 
-**?? Important for upgrades from older versions:**
+**⚠ Important for upgrades from older versions:**
 
 In previous versions, the application **only** worked with a configuration file. Starting with this version, you can now use CLI parameters, config file, or environment variables with the priority system described above.
 

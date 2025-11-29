@@ -47,8 +47,15 @@ SAVE_CONFIG=false
 echo "Starting DynDNS application..."
 echo ""
 
-CMD="./DynDNS --apiKey \"$API_KEY\" --api-password \"$API_PASSWORD\" --customer-number $CUSTOMER_NUMBER --domain \"$DOMAIN\" --execution-interval-in-minutes $EXECUTION_INTERVAL $IGNORED_HOSTS"
+# Build command
+CMD="./DynDNS --apiKey \"$API_KEY\" --api-password \"$API_PASSWORD\" --customer-number $CUSTOMER_NUMBER --domain \"$DOMAIN\" --execution-interval-in-minutes $EXECUTION_INTERVAL"
 
+# Add ignored hosts if specified
+if [ -n "$IGNORED_HOSTS" ]; then
+    CMD="$CMD $IGNORED_HOSTS"
+fi
+
+# Add optional flags
 if [ "$TICKING_CLOCK" = "true" ]; then
     CMD="$CMD --ticking-clock"
 fi
@@ -57,6 +64,7 @@ if [ "$SAVE_CONFIG" = "true" ]; then
     CMD="$CMD --save-config"
 fi
 
-eval $CMD
+# Execute command
+eval "$CMD"
 
 read -p "Press Enter to continue..."

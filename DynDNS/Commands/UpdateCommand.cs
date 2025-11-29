@@ -17,10 +17,11 @@ internal class UpdateCommand : Command<UpdateCommandSettings>
         if (updateCommandSettings.SaveConfig is false)
             configFile.DeleteFile();
 
-        var accountInformation = GetAccountInformation(updateCommandSettings);
+        var accountInformation = GetAccountInformation(updateCommandSettings, configFile);
+
+        var executionIntervalInMinutes = GetExecutionIntervalInMinutes(updateCommandSettings);
 
         var updaterService = new UpdaterService();
-        var executionIntervalInMinutes = GetExecutionIntervalInMinutes(updateCommandSettings);
         updaterService.RunDnsUpdate(accountInformation, executionIntervalInMinutes,
             updateCommandSettings.TickingClock);
 
@@ -48,70 +49,143 @@ internal class UpdateCommand : Command<UpdateCommandSettings>
         return executionIntervalInMinutes;
     }
 
-    private static AccountInformation GetAccountInformation(UpdateCommandSettings updateCommandSettings)
+    private static AccountInformation GetAccountInformation(UpdateCommandSettings updateCommandSettings, ConfigFile configFile)
     {
-        var configFile = new ConfigFile();
+        var isFirstTimeCreation = !configFile.DoesConfigFileExist();
+        var loadedAccountInfo = LoadExistingConfigIfAvailable(configFile, isFirstTimeCreation);
 
-        // Try to load from config file (Priority 2)
-        AccountInformation? loadedAccountInfo = null;
-        if (configFile.DoesConfigFileExist())
-        {
-            loadedAccountInfo = configFile.LoadAccountInformation();
-        }
-
-        // Build UserCredential with priority: CLI (1) > ConfigFile (2) > Environment (3)
-        var userCredentials = new UserCredential
-        {
-            ApiClientKey = GetValueWithPriority(
-                updateCommandSettings.ApiKey,
-                loadedAccountInfo?.Credentials.ApiClientKey,
-                Environment.GetEnvironmentVariable(EnvironmentVariables.NetcupApiKey),
-                "API Key"),
-
-            ApiClientPW = GetValueWithPriority(
-                updateCommandSettings.ApiPassword,
-                loadedAccountInfo?.Credentials.ApiClientPW,
-                Environment.GetEnvironmentVariable(EnvironmentVariables.NetcupApiPassword),
-                "API Password"),
-
-            Domain = GetValueWithPriority(
-                updateCommandSettings.Domain,
-                loadedAccountInfo?.Credentials.Domain,
-                Environment.GetEnvironmentVariable(EnvironmentVariables.NetcupDomain),
-                "Domain"),
-
-            ApiCustomerNumber = GetCustomerNumberWithPriority(
-                updateCommandSettings.CustomerNumber,
-                loadedAccountInfo?.Credentials.ApiCustomerNumber,
-                Environment.GetEnvironmentVariable(EnvironmentVariables.NetcupCustomerNumber))
-        };
-
-        // Handle ignored hosts
+        var credentials = BuildUserCredentials(updateCommandSettings, loadedAccountInfo);
         var ignoredHosts = GetIgnoredHosts(updateCommandSettings, loadedAccountInfo);
 
-        var accountInformation = new AccountInformation(userCredentials, ignoredHosts);
+        if (updateCommandSettings.SaveConfig && isFirstTimeCreation)
+        {
+            return HandleFirstTimeConfigCreation(configFile, credentials);
+        }
+
+        ValidateRequiredCredentials(credentials);
+
+        var accountInformation = new AccountInformation(credentials.Final!, ignoredHosts);
 
         if (updateCommandSettings.SaveConfig)
         {
-            // If this is the first time creating the config and no ignored hosts were specified, add examples
-            var isFirstTimeCreation = !configFile.DoesConfigFileExist();
-            var ignoredHostsForConfig = isFirstTimeCreation && ignoredHosts.Hostnames.Count == 0
-                ? new IgnoredHosts(IgnoredHosts.GetExampleHosts())
-                : ignoredHosts;
-            
-            var accountInfoToSave = new AccountInformation(userCredentials, ignoredHostsForConfig);
-            configFile.StoreAccountInformation(accountInfoToSave);
-            
-            if (isFirstTimeCreation && ignoredHosts.Hostnames.Count == 0)
-            {
-                Console.WriteLine($"Config file created with example ignored hosts. Edit {ConfigFile.FileName} to customize.");
-            }
+            SaveConfigFile(configFile, credentials.Final!, ignoredHosts);
         }
 
         return accountInformation;
     }
 
-    private static string GetValueWithPriority(string? cliValue, string? configValue, string? envValue, string parameterName)
+    private static AccountInformation? LoadExistingConfigIfAvailable(ConfigFile configFile, bool isFirstTimeCreation)
+    {
+        return isFirstTimeCreation ? null : configFile.LoadAccountInformation();
+    }
+
+    private static (string? ApiKey, string? ApiPassword, string? Domain, uint? CustomerNumber, UserCredential? Final) 
+        BuildUserCredentials(UpdateCommandSettings updateCommandSettings, AccountInformation? loadedAccountInfo)
+    {
+        var apiKey = GetValueWithPriority(
+            updateCommandSettings.ApiKey,
+            loadedAccountInfo?.Credentials.ApiClientKey,
+            Environment.GetEnvironmentVariable(EnvironmentVariables.NetcupApiKey),
+            null);
+
+        var apiPassword = GetValueWithPriority(
+            updateCommandSettings.ApiPassword,
+            loadedAccountInfo?.Credentials.ApiClientPW,
+            Environment.GetEnvironmentVariable(EnvironmentVariables.NetcupApiPassword),
+            null);
+
+        var domain = GetValueWithPriority(
+            updateCommandSettings.Domain,
+            loadedAccountInfo?.Credentials.Domain,
+            Environment.GetEnvironmentVariable(EnvironmentVariables.NetcupDomain),
+            null);
+
+        var customerNumber = GetCustomerNumberWithPriority(
+            updateCommandSettings.CustomerNumber,
+            loadedAccountInfo?.Credentials.ApiCustomerNumber,
+            Environment.GetEnvironmentVariable(EnvironmentVariables.NetcupCustomerNumber),
+            null);
+
+        UserCredential? finalCredentials = null;
+        if (apiKey != null && apiPassword != null && domain != null && customerNumber != null)
+        {
+            finalCredentials = new UserCredential
+            {
+                ApiClientKey = apiKey,
+                ApiClientPW = apiPassword,
+                Domain = domain,
+                ApiCustomerNumber = customerNumber.Value
+            };
+        }
+
+        return (apiKey, apiPassword, domain, customerNumber, finalCredentials);
+    }
+
+    private static AccountInformation HandleFirstTimeConfigCreation(
+        ConfigFile configFile,
+        (string? ApiKey, string? ApiPassword, string? Domain, uint? CustomerNumber, UserCredential? Final) credentials)
+    {
+        var placeholderCredentials = new UserCredential
+        {
+            ApiClientKey = credentials.ApiKey ?? "your_api_key_here",
+            ApiClientPW = credentials.ApiPassword ?? "your_api_password_here",
+            Domain = credentials.Domain ?? "example.com",
+            ApiCustomerNumber = credentials.CustomerNumber ?? 123456
+        };
+
+        var exampleIgnoredHosts = new IgnoredHosts(IgnoredHosts.GetExampleHosts());
+        var accountInfoToSave = new AccountInformation(placeholderCredentials, exampleIgnoredHosts);
+        configFile.StoreAccountInformation(accountInfoToSave);
+
+        Console.WriteLine($"Config file created: {ConfigFile.FileName}");
+        Console.WriteLine("Please edit the file with your actual credentials and run again.");
+        Console.WriteLine();
+
+        if (credentials.Final == null)
+        {
+            Console.WriteLine("Configuration file created. Please fill in your credentials and run the application again.");
+            credentials.Final = placeholderCredentials;
+        }
+
+        return new AccountInformation(credentials.Final, exampleIgnoredHosts);
+    }
+
+    private static void ValidateRequiredCredentials(
+        (string? ApiKey, string? ApiPassword, string? Domain, uint? CustomerNumber, UserCredential? Final) credentials)
+    {
+        if (credentials.ApiKey == null)
+            throw new InvalidOperationException(
+                "API Key is required. Provide it via CLI parameter, config file, or environment variable.");
+        
+        if (credentials.ApiPassword == null)
+            throw new InvalidOperationException(
+                "API Password is required. Provide it via CLI parameter, config file, or environment variable.");
+        
+        if (credentials.Domain == null)
+            throw new InvalidOperationException(
+                "Domain is required. Provide it via CLI parameter, config file, or environment variable.");
+        
+        if (credentials.CustomerNumber == null)
+            throw new InvalidOperationException(
+                "Customer Number is required. Provide it via CLI parameter, config file, or environment variable.");
+    }
+
+    private static void SaveConfigFile(ConfigFile configFile, UserCredential credentials, IgnoredHosts ignoredHosts)
+    {
+        var ignoredHostsForConfig = ignoredHosts.Hostnames.Count == 0
+            ? new IgnoredHosts(IgnoredHosts.GetExampleHosts())
+            : ignoredHosts;
+
+        var accountInfoToSave = new AccountInformation(credentials, ignoredHostsForConfig);
+        configFile.StoreAccountInformation(accountInfoToSave);
+
+        if (ignoredHosts.Hostnames.Count == 0)
+        {
+            Console.WriteLine($"Config file updated with example ignored hosts. Edit {ConfigFile.FileName} to customize.");
+        }
+    }
+
+    private static string? GetValueWithPriority(string? cliValue, string? configValue, string? envValue, string? parameterName)
     {
         // Priority 1: CLI parameter
         if (!string.IsNullOrEmpty(cliValue))
@@ -125,10 +199,10 @@ internal class UpdateCommand : Command<UpdateCommandSettings>
         if (!string.IsNullOrEmpty(envValue))
             return envValue;
 
-        throw new InvalidOperationException($"{parameterName} is required. Provide it via CLI parameter, config file, or environment variable.");
+        return null;
     }
 
-    private static uint GetCustomerNumberWithPriority(int? cliValue, uint? configValue, string? envValue)
+    private static uint? GetCustomerNumberWithPriority(int? cliValue, uint? configValue, string? envValue, string? parameterName)
     {
         // Priority 1: CLI parameter
         if (cliValue.HasValue && cliValue.Value > 0)
@@ -142,7 +216,7 @@ internal class UpdateCommand : Command<UpdateCommandSettings>
         if (!string.IsNullOrEmpty(envValue) && uint.TryParse(envValue, out var parsedValue) && parsedValue > 0)
             return parsedValue;
 
-        throw new InvalidOperationException("Customer Number is required. Provide it via CLI parameter, config file, or environment variable.");
+        return null;
     }
 
     private static IgnoredHosts GetIgnoredHosts(UpdateCommandSettings updateCommandSettings, AccountInformation? loadedAccountInfo)
