@@ -59,7 +59,7 @@ internal class UpdateCommand : Command<UpdateCommandSettings>
 
         if (updateCommandSettings.SaveConfig && isFirstTimeCreation)
         {
-            return HandleFirstTimeConfigCreation(configFile, credentials);
+            return HandleFirstTimeConfigCreation(configFile, credentials, ignoredHosts);
         }
 
         ValidateRequiredCredentials(credentials);
@@ -123,7 +123,8 @@ internal class UpdateCommand : Command<UpdateCommandSettings>
 
     private static AccountInformation HandleFirstTimeConfigCreation(
         ConfigFile configFile,
-        (string? ApiKey, string? ApiPassword, string? Domain, uint? CustomerNumber, UserCredential? Final) credentials)
+        (string? ApiKey, string? ApiPassword, string? Domain, uint? CustomerNumber, UserCredential? Final) credentials,
+        IgnoredHosts ignoredHosts)
     {
         var placeholderCredentials = new UserCredential
         {
@@ -133,11 +134,20 @@ internal class UpdateCommand : Command<UpdateCommandSettings>
             ApiCustomerNumber = credentials.CustomerNumber ?? 123456
         };
 
-        var exampleIgnoredHosts = new IgnoredHosts(IgnoredHosts.GetExampleHosts());
-        var accountInfoToSave = new AccountInformation(placeholderCredentials, exampleIgnoredHosts);
+        var ignoredHostsForConfig = ignoredHosts.Hostnames.Count == 0
+            ? new IgnoredHosts(IgnoredHosts.GetExampleHosts())
+            : ignoredHosts;
+
+        var accountInfoToSave = new AccountInformation(placeholderCredentials, ignoredHostsForConfig);
         configFile.StoreAccountInformation(accountInfoToSave);
 
         Console.WriteLine($"Config file created: {ConfigFile.FileName}");
+        
+        if (ignoredHosts.Hostnames.Count == 0)
+        {
+            Console.WriteLine("Example ignored hosts added. Edit the file to customize.");
+        }
+        
         Console.WriteLine("Please edit the file with your actual credentials and run again.");
         Console.WriteLine();
 
@@ -147,7 +157,7 @@ internal class UpdateCommand : Command<UpdateCommandSettings>
             credentials.Final = placeholderCredentials;
         }
 
-        return new AccountInformation(credentials.Final, exampleIgnoredHosts);
+        return new AccountInformation(credentials.Final, ignoredHostsForConfig);
     }
 
     private static void ValidateRequiredCredentials(
@@ -172,17 +182,8 @@ internal class UpdateCommand : Command<UpdateCommandSettings>
 
     private static void SaveConfigFile(ConfigFile configFile, UserCredential credentials, IgnoredHosts ignoredHosts)
     {
-        var ignoredHostsForConfig = ignoredHosts.Hostnames.Count == 0
-            ? new IgnoredHosts(IgnoredHosts.GetExampleHosts())
-            : ignoredHosts;
-
-        var accountInfoToSave = new AccountInformation(credentials, ignoredHostsForConfig);
+        var accountInfoToSave = new AccountInformation(credentials, ignoredHosts);
         configFile.StoreAccountInformation(accountInfoToSave);
-
-        if (ignoredHosts.Hostnames.Count == 0)
-        {
-            Console.WriteLine($"Config file updated with example ignored hosts. Edit {ConfigFile.FileName} to customize.");
-        }
     }
 
     private static string? GetValueWithPriority(string? cliValue, string? configValue, string? envValue, string? parameterName)
