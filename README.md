@@ -46,8 +46,6 @@ These parameters are **required** but can be provided via CLI, config file, or e
 
 Both API tokens can be generated in your CCP under "Stammdaten/>_API" or respectively "Master Data/>_API". (Keep them Secret!!!)
 
-**Example:**![preview_v3 0 0](https://github.com/user-attachments/assets/141375ac-0c11-46c5-8d1d-ea6273aea2f2)
-
 ```bash
 ./DynDNS --apiKey "your_key" --api-password "your_password" --customer-number 123456 --domain "example.com"
 ```
