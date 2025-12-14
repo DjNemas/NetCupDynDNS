@@ -7,8 +7,8 @@ namespace DynDNS.Models.Actions
         [JsonPropertyName("customernumber")]
         public uint CustomerNumber { get; set; }
         [JsonPropertyName("apisessionid")]
-        public string ApiSessionID { get; set; }
+        public required string ApiSessionID { get; set; }
         [JsonPropertyName("apikey")]
-        public string ApiKey { get; set; }
+        public required string ApiKey { get; set; }
     }
 }

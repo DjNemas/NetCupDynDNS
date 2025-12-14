@@ -2,7 +2,7 @@
 {
     public class PublicIPAdresse
     {
-        public string IP { get; set; }
+        public string IP { get; set; } = string.Empty;
         public IPType Type { get; set; }
     }
 

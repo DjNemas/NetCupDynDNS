@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DynDNS": {
+      "commandName": "Project",
+      "commandLineArgs": "-s -t -e 1"
+    }
+  }
+}
