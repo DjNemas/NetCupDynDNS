@@ -10,7 +10,7 @@ The Binary exists for Windows x64 and Linux x64 (not ARM architecture).
 Let us say you have a Server running on your home:
 When this Application is running on this Server, it will auto update the domain record to the public IP of this server.
 
-![Preview](https://djnemas.de/SX/WindowsTerminal_hczA9AShWq.gif)
+![Preview v3.0.0](https://github.com/user-attachments/assets/f9aeeb58-ff93-4baa-9704-26342dc094fe)
 
 # Technical Details
 
@@ -46,7 +46,8 @@ These parameters are **required** but can be provided via CLI, config file, or e
 
 Both API tokens can be generated in your CCP under "Stammdaten/>_API" or respectively "Master Data/>_API". (Keep them Secret!!!)
 
-**Example:**
+**Example:**![preview_v3 0 0](https://github.com/user-attachments/assets/141375ac-0c11-46c5-8d1d-ea6273aea2f2)
+
 ```bash
 ./DynDNS --apiKey "your_key" --api-password "your_password" --customer-number 123456 --domain "example.com"
 ```
